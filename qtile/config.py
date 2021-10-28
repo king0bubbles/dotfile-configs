@@ -1,46 +1,61 @@
+# SOFTWARE.
 
 from typing import List  # noqa: F401
 
-from libqtile import bar, hook, layout, qtile
+from libqtile import bar, layout, widget
 from libqtile.config import Click, Drag, Group, Key, Match, Screen
 from libqtile.lazy import lazy
-from libqtile.widget import (CurrentLayout, GroupBox, Prompt, Spacer, WindowTab, Clock, QuickExit)
+from libqtile.utils import guess_terminal
 
 mod = "mod4"
-terminal = "xfce4-terminal" 
+terminal = guess_terminal()
 
-def init_keys():
-	keys = [
-	# Switch between windows
-	Key([mod], "left", lazy.layout.left()),
-	Key([mod], "right", lazy.layout.right()),
-	Key([mod], "down", lazy.layout.down()),
-	Key([mod], "up", lazy.layout.up()),
-	Key([mod], "space", lazy.layout.next()),
+keys = [
+    # Switch between windows
+    Key([mod], "h", lazy.layout.left(), desc="Move focus to left"),
+    Key([mod], "l", lazy.layout.right(), desc="Move focus to right"),
+    Key([mod], "j", lazy.layout.down(), desc="Move focus down"),
+    Key([mod], "k", lazy.layout.up(), desc="Move focus up"),
+    Key([mod], "space", lazy.layout.next(),
+        desc="Move window focus to other window"),
 
-	# Move columns/stack
-	Key([mod, "shift"], "left", lazy.layout.shuffle_left()),
-	Key([mod, "shift"], "right", lazy.layout.shuffle_right()),
-	Key([mod, "shift"], "down", lazy.layout.shuffle_down()),
-	Key([mod, "shift"], "up", lazy.layout.shuffle_up()),
+    # Move windows between left/right columns or move up/down in current stack.
+    # Moving out of range in Columns layout will create new column.
+    Key([mod, "shift"], "h", lazy.layout.shuffle_left(),
+        desc="Move window to the left"),
+    Key([mod, "shift"], "l", lazy.layout.shuffle_right(),
+        desc="Move window to the right"),
+    Key([mod, "shift"], "j", lazy.layout.shuffle_down(),
+        desc="Move window down"),
+    Key([mod, "shift"], "k", lazy.layout.shuffle_up(), desc="Move window up"),
 
-	# Grow windows.
-	Key([mod, "control"], "left", lazy.layout.grow_left()),
-	Key([mod, "control"], "right", lazy.layout.grow_right()),
-	Key([mod, "control"], "down", lazy.layout.grow_down()),
-	Key([mod, "control"], "up", lazy.layout.grow_up()),
-	Key([mod], "n", lazy.layout.normalize()),
-	
-	# Toggle between split/unsplit
-	Key([mod, "shift"], "Return", lazy.layout.toggle_split()),
-	Key([mod], "Return", lazy.spawn(terminal)),
-	
-	# Toggle etc.
-	Key([mod], "Tab", lazy.next_layout()),
-	Key([mod], "w", lazy.window.kill()),
-	Key([mod, "control"], "r", lazy.restart()),
-	Key([mod, "control"], "q", lazy.shutdown()),
-	Key([mod], "r", lazy.spawncmd()),
+    # Grow windows. If current window is on the edge of screen and direction
+    # will be to screen edge - window would shrink.
+    Key([mod, "control"], "h", lazy.layout.grow_left(),
+        desc="Grow window to the left"),
+    Key([mod, "control"], "l", lazy.layout.grow_right(),
+        desc="Grow window to the right"),
+    Key([mod, "control"], "j", lazy.layout.grow_down(),
+        desc="Grow window down"),
+    Key([mod, "control"], "k", lazy.layout.grow_up(), desc="Grow window up"),
+    Key([mod], "n", lazy.layout.normalize(), desc="Reset all window sizes"),
+
+    # Toggle between split and unsplit sides of stack.
+    # Split = all windows displayed
+    # Unsplit = 1 window displayed, like Max layout, but still with
+    # multiple stack panes
+    Key([mod, "shift"], "Return", lazy.layout.toggle_split(),
+        desc="Toggle between split and unsplit sides of stack"),
+    Key([mod], "Return", lazy.spawn(terminal), desc="Launch terminal"),
+
+    # Toggle between different layouts as defined below
+    Key([mod], "Tab", lazy.next_layout(), desc="Toggle between layouts"),
+    Key([mod], "w", lazy.window.kill(), desc="Kill focused window"),
+
+    Key([mod, "control"], "r", lazy.restart(), desc="Restart Qtile"),
+    Key([mod, "control"], "q", lazy.shutdown(), desc="Shutdown Qtile"),
+    Key([mod], "r", lazy.spawncmd(),
+        desc="Spawn a command using a prompt widget"),
 ]
 
 groups = [Group(i) for i in "123456789"]
@@ -48,8 +63,8 @@ groups = [Group(i) for i in "123456789"]
 for i in groups:
     keys.extend([
         # mod1 + letter of group = switch to group
-        Key([mod], i.name, lazy.group[i.name].toscreen()),
-            desc="Switch to group {}".format(i.name),
+        Key([mod], i.name, lazy.group[i.name].toscreen(),
+            desc="Switch to group {}".format(i.name)),
 
         # mod1 + shift + letter of group = switch to & move focused window to group
         Key([mod, "shift"], i.name, lazy.window.togroup(i.name, switch_group=True),
@@ -61,14 +76,13 @@ for i in groups:
     ])
 
 layouts = [
-    #layout.Columns(border_focus_stack=['#ff1268', '#ff1268'], border_width=1, margin=8),
     layout.Max(),
-    # Try more layouts by unleashing below layouts.
+    layout.Columns(border_focus_stack=['#e4287c', '#e4287c'], border_width=2, margin=8),
     # layout.Stack(num_stacks=2),
     # layout.Bsp(),
-    layout.MonadTall(border_focus=['#ff1268', '#ff1268'], border_width=1, margin=8),
-    layout.MonadWide(border_focus=['#ff1268', '#ff1268'], border_width=1, margin=8),
-    layout.Matrix(border_focus=['#ff1268', '#ff1268'], border_width=1, margin=4),
+    layout.MonadTall(border_focus=['#e4287c', '#e4287c'], border_width=2, margin=8),
+    layout.MonadWide(border_focus=['#e4287c', '#e4287c'], border_width=2, margin=8),
+    layout.Matrix(border_focus=['#e4287c', '#e4287c'], border_width=2, margin=8),
     # layout.RatioTile(),
     # layout.Tile(),
     # layout.TreeTab(),
@@ -77,7 +91,7 @@ layouts = [
 ]
 
 widget_defaults = dict(
-    font='source_code_pro_semibold',
+    font='sans',
     fontsize=12,
     padding=3,
 )
@@ -88,12 +102,15 @@ screens = [
         top=bar.Bar(
             [
                 widget.CurrentLayout(),
-                widget.GroupBox(),
-                widget.Prompt(),
-		widget.Spacer(length=800),
-		widget.WindowTab(),
-                widget.Clock(format='%m-%d-%Y %a %I:%M %p'),
+                widget.AGroupBox(border='e4287c', borderwidth=1),
+		widget.Clock(format='%m-%d-%Y %a %I:%M %p'),
+		widget.Prompt(prompt='command: '),
+		widget.Spacer(),
+                widget.WindowName(width=bar.CALCULATED),
+                widget.Spacer(),
+                widget.PulseVolume(),
                 widget.QuickExit(),
+		widget.Systray(),
             ],
             24,
         ),
